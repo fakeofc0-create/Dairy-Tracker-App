@@ -1,6 +1,6 @@
 <!-- Chosen Palette: Minimalist Harmony (Warm Neutrals, Subtle Blue Accent) -->
 <!-- Application Structure Plan: Simplified Task-Oriented View. The single page now consists of three stacked, full-width sections: 1. Data Entry Form (top), 2. Key Performance Indicators (KPI) and Filter Controls (middle), and 3. Daily Entry Log (bottom). This structure prioritizes quick access to all core functions and calculations without visual distraction, making it highly effective for mobile usage. -->
-<!-- Visualization & Content Choices: Report Info -> Daily Input Data (Liters, Cost) -> Goal -> Inform/Validate Daily Entry -> Viz/Presentation Method -> Simple Form and Data Log Table -> Interaction -> Add/Remove entries, Filter by Month -> Justification -> Focuses the user entirely on input and summary data for maximum clarity. Library/Method -> HTML/Tailwind/JS. -->
+<!-- Visualization & Content Choices: Report Info -> Daily Input Data (Liters, Cost) -> Goal -> Inform/Validate Daily Entry -> Viz/Presentation Method -> Simple Form and Data Log Table -> Interaction -> Add/Remove entries, Filter by Month, Download CSV -> Justification -> Focuses the user entirely on input and summary data for maximum clarity and exportability. Library/Method -> HTML/Tailwind/JS. -->
 <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 <!DOCTYPE html>
 <html lang="en">
@@ -46,14 +46,15 @@
             <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2 flex items-center space-x-2">
                 <span>🗓️ Daily Input Form</span>
             </h2>
-            <p class="text-sm text-gray-600 mb-4">This form is for quickly logging today's milk consumption and paneer spending. The dashboard updates instantly when you add an entry.</p>
+            <p class="text-sm text-gray-600 mb-4">This form is for quickly logging today's milk consumption and paneer spending. The dashboard updates instantly when you add an entry. (Paneer is optional)</p>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <input type="date" id="inputDate" class="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-700" required>
                 
                 <input type="number" id="inputMilk" placeholder="Milk (Liters)" min="0" step="0.5" class="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-700" required>
                 
-                <input type="number" id="inputPaneer" placeholder="Paneer Cost (₹)" min="0" step="1" class="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-700" required>
+                <!-- REQUIRED REMOVED, making it optional as requested -->
+                <input type="number" id="inputPaneer" placeholder="Paneer Cost (₹) (Optional)" min="0" step="1" class="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-700">
                 
                 <button id="addEntryButton" class="w-full p-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition duration-200 shadow-md">
                     + Add Entry
@@ -107,8 +108,11 @@
 
         <!-- RAW DATA VIEW SECTION -->
         <section class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2 flex items-center space-x-2">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2 flex items-center justify-between">
                 <span>📋 Daily Entry Log</span>
+                <button id="downloadCsvButton" class="px-3 py-1 bg-green-500 text-white text-sm font-semibold rounded-lg hover:bg-green-600 transition duration-200 shadow-md flex items-center">
+                    ⬇️ Download CSV
+                </button>
             </h2>
             <p class="text-sm text-gray-600 mb-4">Review all entries for the selected period. Click on an entry to remove it.</p>
             
@@ -148,6 +152,7 @@
         const kpiPaneerCost = document.getElementById('kpiPaneerCost');
         const kpiMilkLiters = document.getElementById('kpiMilkLiters');
         const entryLogBody = document.getElementById('entryLogBody');
+        const downloadCsvButton = document.getElementById('downloadCsvButton');
 
         const showMessage = (text, type = 'success') => {
             messageBox.textContent = text;
@@ -198,6 +203,11 @@
 
         const getCurrentFilterMonth = () => {
             const [year, month] = monthFilter.value.split('-');
+            // Return current year/month if filter is empty (shouldn't happen with setInitialFilter)
+            if (!year || !month) {
+                const today = new Date();
+                return { year: today.getFullYear(), month: today.getMonth() + 1 };
+            }
             return { year: parseInt(year), month: parseInt(month) };
         };
 
@@ -274,10 +284,11 @@
         const addEntry = () => {
             const date = dateInput.value;
             const milk = parseFloat(milkInput.value);
-            const paneer = parseFloat(paneerInput.value);
+            // Handle optional paneer entry: if empty string, set to 0, otherwise parse it.
+            const paneer = paneerInput.value.trim() === '' ? 0 : parseFloat(paneerInput.value);
 
-            if (!date || isNaN(milk) || isNaN(paneer) || milk < 0 || paneer < 0) {
-                showMessage('Please enter a valid date, milk volume, and paneer cost.', 'error');
+            if (!date || isNaN(milk) || milk < 0 || isNaN(paneer) || paneer < 0) {
+                showMessage('Please enter a valid date and non-negative milk volume. Paneer cost must be non-negative if entered.', 'error');
                 return;
             }
 
@@ -308,6 +319,43 @@
             paneerInput.value = '';
         };
 
+        const downloadCSV = () => {
+            const { year, month } = getCurrentFilterMonth();
+            const filteredEntries = filterEntries(dairyEntries, year, month);
+            
+            if (filteredEntries.length === 0) {
+                showMessage('No data to download for the selected month.', 'error');
+                return;
+            }
+            
+            let csvContent = "Date,Milk (Liters),Paneer Cost (Rs)\n";
+
+            filteredEntries.forEach(entry => {
+                const row = [
+                    entry.date, 
+                    entry.milk.toFixed(1), 
+                    entry.paneer.toFixed(2)
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
+            // Create a Blob and link to trigger download
+            const filename = `Dairy_Tracker_Report_${year}-${String(month).padStart(2, '0')}.csv`;
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showMessage(`Data downloaded as ${filename}.`, 'success');
+        };
+
+
         const setInitialFilter = () => {
             const today = new Date();
             const year = today.getFullYear();
@@ -327,7 +375,6 @@
 
             updateKPIs(totals);
             populateLog(filtered);
-            // Removed createChart(filtered);
         };
 
         // --- Initialization and Event Listeners ---
@@ -338,6 +385,7 @@
             
             addButton.addEventListener('click', addEntry);
             monthFilter.addEventListener('change', renderApp);
+            downloadCsvButton.addEventListener('click', downloadCSV); // New listener for CSV download
         });
     </script>
 </body>
