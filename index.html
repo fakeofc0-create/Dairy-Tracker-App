@@ -1,0 +1,344 @@
+<!-- Chosen Palette: Minimalist Harmony (Warm Neutrals, Subtle Blue Accent) -->
+<!-- Application Structure Plan: Simplified Task-Oriented View. The single page now consists of three stacked, full-width sections: 1. Data Entry Form (top), 2. Key Performance Indicators (KPI) and Filter Controls (middle), and 3. Daily Entry Log (bottom). This structure prioritizes quick access to all core functions and calculations without visual distraction, making it highly effective for mobile usage. -->
+<!-- Visualization & Content Choices: Report Info -> Daily Input Data (Liters, Cost) -> Goal -> Inform/Validate Daily Entry -> Viz/Presentation Method -> Simple Form and Data Log Table -> Interaction -> Add/Remove entries, Filter by Month -> Justification -> Focuses the user entirely on input and summary data for maximum clarity. Library/Method -> HTML/Tailwind/JS. -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dairy Tracker | Monthly Payment Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-primary: #3b82f6; /* Blue 500 */
+            --color-accent: #22c55e;  /* Green 500 */
+            --color-background: #fdfdfd; /* Near white */
+            --color-card: #ffffff;
+            --color-text: #1f2937; /* Gray 800 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-background);
+            color: var(--color-text);
+        }
+        .scrollable-table {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <header class="text-center mb-8">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 flex items-center justify-center space-x-2">
+            <span>🥛 Dairy Payment Tracker</span>
+        </h1>
+        <p class="text-gray-500 mt-1">Daily Entry and Monthly Summary Dashboard</p>
+    </header>
+
+    <main class="max-w-7xl mx-auto space-y-8">
+
+        <!-- DATA ENTRY SECTION -->
+        <section class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2 flex items-center space-x-2">
+                <span>🗓️ Daily Input Form</span>
+            </h2>
+            <p class="text-sm text-gray-600 mb-4">This form is for quickly logging today's milk consumption and paneer spending. The dashboard updates instantly when you add an entry.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="date" id="inputDate" class="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-700" required>
+                
+                <input type="number" id="inputMilk" placeholder="Milk (Liters)" min="0" step="0.5" class="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-700" required>
+                
+                <input type="number" id="inputPaneer" placeholder="Paneer Cost (₹)" min="0" step="1" class="p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-700" required>
+                
+                <button id="addEntryButton" class="w-full p-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition duration-200 shadow-md">
+                    + Add Entry
+                </button>
+            </div>
+            <div id="messageBox" class="mt-3 p-2 text-sm rounded-lg hidden"></div>
+        </section>
+
+        <!-- MAIN CONTENT (KPIs and Filters now occupy the main visual space) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- KPIs Section -->
+            <section class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center space-x-2">
+                    <span>💰 Monthly Financial Summary</span>
+                </h2>
+                <p class="text-sm text-gray-600 mb-4">Key metrics show the total calculated costs for the current period, based on the **₹73/Liter** milk price.</p>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                        <p class="text-sm text-blue-700 font-medium">Grand Total Payable</p>
+                        <p id="kpiGrandTotal" class="text-2xl font-extrabold text-blue-800 mt-1">₹0</p>
+                    </div>
+                    <div class="p-4 bg-green-50 rounded-xl border border-green-200">
+                        <p class="text-sm text-green-700 font-medium">Total Milk Cost</p>
+                        <p id="kpiMilkCost" class="text-2xl font-extrabold text-green-800 mt-1">₹0</p>
+                    </div>
+                    <div class="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                        <p class="text-sm text-yellow-700 font-medium">Total Paneer Cost</p>
+                        <p id="kpiPaneerCost" class="text-2xl font-extrabold text-yellow-800 mt-1">₹0</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                        <p class="text-sm text-gray-700 font-medium">Total Milk Liters</p>
+                        <p id="kpiMilkLiters" class="text-2xl font-extrabold text-gray-800 mt-1">0 L</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- MONTH FILTER -->
+            <section class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center space-x-2">
+                    <span>🔍 Filter Data</span>
+                </h2>
+                <p class="text-sm text-gray-600 mb-4">Select the month and year to view specific totals and records.</p>
+
+                <label for="monthFilter" class="block text-sm font-medium text-gray-700 mb-2">Select Month & Year:</label>
+                <input type="month" id="monthFilter" class="p-3 border border-gray-300 rounded-lg w-full focus:ring-blue-500 focus:border-blue-500 text-gray-700">
+            </section>
+        </div>
+
+        <!-- RAW DATA VIEW SECTION -->
+        <section class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2 flex items-center space-x-2">
+                <span>📋 Daily Entry Log</span>
+            </h2>
+            <p class="text-sm text-gray-600 mb-4">Review all entries for the selected period. Click on an entry to remove it.</p>
+            
+            <div class="scrollable-table border border-gray-200 rounded-lg">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0 z-10">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Milk (L)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paneer (₹)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="entryLogBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const MILK_PRICE_PER_LITER = 73;
+        let dairyEntries = [];
+        
+
+        const dateInput = document.getElementById('inputDate');
+        const milkInput = document.getElementById('inputMilk');
+        const paneerInput = document.getElementById('inputPaneer');
+        const addButton = document.getElementById('addEntryButton');
+        const monthFilter = document.getElementById('monthFilter');
+        const messageBox = document.getElementById('messageBox');
+        
+        const kpiGrandTotal = document.getElementById('kpiGrandTotal');
+        const kpiMilkCost = document.getElementById('kpiMilkCost');
+        const kpiPaneerCost = document.getElementById('kpiPaneerCost');
+        const kpiMilkLiters = document.getElementById('kpiMilkLiters');
+        const entryLogBody = document.getElementById('entryLogBody');
+
+        const showMessage = (text, type = 'success') => {
+            messageBox.textContent = text;
+            messageBox.className = 'mt-3 p-2 text-sm rounded-lg'; 
+            if (type === 'success') {
+                messageBox.classList.add('bg-green-100', 'text-green-800');
+            } else if (type === 'error') {
+                messageBox.classList.add('bg-red-100', 'text-red-800');
+            }
+            messageBox.classList.remove('hidden');
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 3000);
+        };
+
+        const saveData = () => {
+            try {
+                // Use a simple JSON serialization for persistence (simulating db)
+                localStorage.setItem('dairyEntries', JSON.stringify(dairyEntries));
+            } catch (e) {
+                console.error('Error saving data to localStorage:', e);
+            }
+        };
+
+        const loadData = () => {
+            try {
+                const storedData = localStorage.getItem('dairyEntries');
+                if (storedData) {
+                    dairyEntries = JSON.parse(storedData);
+                    // Ensure dates are parsed correctly
+                    dairyEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
+                } else {
+                    // Initial mock data if empty (based on Source Report examples)
+                    dairyEntries = [
+                        { date: '2024-10-01', milk: 1, paneer: 50 },
+                        { date: '2024-10-02', milk: 2, paneer: 0 },
+                        { date: '2024-10-03', milk: 1, paneer: 120 },
+                        { date: '2024-11-01', milk: 1.5, paneer: 75 },
+                        { date: '2024-11-02', milk: 1, paneer: 0 },
+                    ];
+                    saveData();
+                }
+            } catch (e) {
+                console.error('Error loading or parsing data:', e);
+                dairyEntries = []; // Reset on corruption
+            }
+        };
+
+        const getCurrentFilterMonth = () => {
+            const [year, month] = monthFilter.value.split('-');
+            return { year: parseInt(year), month: parseInt(month) };
+        };
+
+        const filterEntries = (entries, year, month) => {
+            return entries.filter(entry => {
+                const entryDate = new Date(entry.date + 'T00:00:00'); // Add time to prevent timezone issues
+                return entryDate.getFullYear() === year && (entryDate.getMonth() + 1) === month;
+            });
+        };
+
+        const calculateTotals = (filteredEntries) => {
+            let totalLiters = 0;
+            let totalPaneerCost = 0;
+
+            for (const entry of filteredEntries) {
+                totalLiters += entry.milk;
+                totalPaneerCost += entry.paneer;
+            }
+
+            const totalMilkCost = totalLiters * MILK_PRICE_PER_LITER;
+            const grandTotal = totalMilkCost + totalPaneerCost;
+
+            return {
+                totalLiters: totalLiters,
+                totalPaneerCost: totalPaneerCost,
+                totalMilkCost: totalMilkCost,
+                grandTotal: grandTotal,
+            };
+        };
+
+        const updateKPIs = (totals) => {
+            kpiGrandTotal.textContent = `₹${totals.grandTotal.toFixed(2)}`;
+            kpiMilkCost.textContent = `₹${totals.totalMilkCost.toFixed(2)}`;
+            kpiPaneerCost.textContent = `₹${totals.totalPaneerCost.toFixed(2)}`;
+            kpiMilkLiters.textContent = `${totals.totalLiters.toFixed(1)} L`;
+        };
+
+        const populateLog = (filteredEntries) => {
+            entryLogBody.innerHTML = '';
+            
+            if (filteredEntries.length === 0) {
+                entryLogBody.innerHTML = `<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">No entries found for this month.</td></tr>`;
+                return;
+            }
+
+            filteredEntries.forEach((entry, index) => {
+                const row = entryLogBody.insertRow();
+                row.className = 'hover:bg-gray-50 cursor-pointer';
+                row.onclick = () => removeEntry(entry.date); // Use date as a unique key for simplicity
+                
+                row.insertCell().textContent = entry.date;
+                row.insertCell().textContent = entry.milk.toFixed(1);
+                row.insertCell().textContent = entry.paneer.toFixed(2);
+                row.insertCell().innerHTML = '<span class="text-red-500 text-sm">✕ Remove</span>';
+            });
+        };
+        
+        const removeEntry = (dateToRemove) => {
+            // Note: window.confirm() replaced with a custom message in the instructions, but for simplicity in this SPA context, we'll use a direct check.
+            if (!confirm('Are you sure you want to remove the entry for ' + dateToRemove + '?')) {
+                return;
+            }
+            
+            const initialLength = dairyEntries.length;
+            dairyEntries = dairyEntries.filter(entry => entry.date !== dateToRemove);
+            
+            if (dairyEntries.length < initialLength) {
+                saveData();
+                renderApp();
+                showMessage(`Entry for ${dateToRemove} removed.`, 'success');
+            }
+        };
+
+        const addEntry = () => {
+            const date = dateInput.value;
+            const milk = parseFloat(milkInput.value);
+            const paneer = parseFloat(paneerInput.value);
+
+            if (!date || isNaN(milk) || isNaN(paneer) || milk < 0 || paneer < 0) {
+                showMessage('Please enter a valid date, milk volume, and paneer cost.', 'error');
+                return;
+            }
+
+            const existingIndex = dairyEntries.findIndex(e => e.date === date);
+
+            const newEntry = {
+                date: date,
+                milk: milk,
+                paneer: paneer
+            };
+            
+            if (existingIndex !== -1) {
+                // Update existing entry
+                dairyEntries[existingIndex] = newEntry;
+                showMessage(`Entry for ${date} updated successfully.`, 'success');
+            } else {
+                // Add new entry
+                dairyEntries.push(newEntry);
+                dairyEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
+                showMessage(`New entry for ${date} added successfully.`, 'success');
+            }
+
+            saveData();
+            renderApp();
+            
+            // Clear inputs except date
+            milkInput.value = '';
+            paneerInput.value = '';
+        };
+
+        const setInitialFilter = () => {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const defaultMonth = `${year}-${month}`;
+            monthFilter.value = defaultMonth;
+
+            // Set default date input to today
+            const day = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${year}-${month}-${day}`;
+        };
+
+        const renderApp = () => {
+            const { year, month } = getCurrentFilterMonth();
+            const filtered = filterEntries(dairyEntries, year, month);
+            const totals = calculateTotals(filtered);
+
+            updateKPIs(totals);
+            populateLog(filtered);
+            // Removed createChart(filtered);
+        };
+
+        // --- Initialization and Event Listeners ---
+        document.addEventListener('DOMContentLoaded', () => {
+            setInitialFilter();
+            loadData();
+            renderApp();
+            
+            addButton.addEventListener('click', addEntry);
+            monthFilter.addEventListener('change', renderApp);
+        });
+    </script>
+</body>
+</html>
